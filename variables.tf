@@ -4,3 +4,4 @@ variable "env" {}
 variable "service_account" {}
 variable "aws_region" {}
 variable "owner_email" {}
+variable "owner" {}

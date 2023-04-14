@@ -2,7 +2,7 @@
 resource "aws_vpc" "main" {
   cidr_block = "10.1.0.0/16"
   tags = {
-    Name    = "tgw-example-vpc",
+    Name    = "${var.owner}-tgw-example-vpc",
     "owner" = var.owner_email
   }
 }
@@ -10,7 +10,7 @@ resource "aws_vpc" "main" {
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
   tags = {
-    Name    = "tgw-example-igw",
+    Name    = "${var.owner}-tgw-example-igw",
     "owner" = var.owner_email
   }
 }
@@ -30,7 +30,7 @@ resource "aws_subnet" "private" {
   availability_zone_id = data.aws_availability_zones.non_local.zone_ids[count.index]
   cidr_block           = "10.1.${count.index}.0/24"
   tags = {
-    Name    = "tgw-example-subnet-private-${count.index}",
+    Name    = "${var.owner}-tgw-example-subnet-private-${count.index}",
     "owner" = var.owner_email
   }
 }
@@ -42,7 +42,7 @@ resource "aws_subnet" "public" {
   availability_zone_id = data.aws_availability_zones.non_local.zone_ids[count.index]
   cidr_block           = "10.1.${100 + count.index}.0/24"
   tags = {
-    Name    = "tgw-example-subnet-public-${count.index}",
+    Name    = "${var.owner}-tgw-example-subnet-public-${count.index}",
     "owner" = var.owner_email
   }
 }
@@ -52,7 +52,7 @@ resource "aws_route_table" "private" {
   count  = length(aws_subnet.private)
   vpc_id = aws_vpc.main.id
   tags = {
-    Name    = "tgw-example-subnet-private-${count.index}-rt",
+    Name    = "${var.owner}-tgw-example-subnet-private-${count.index}-rt",
     "owner" = var.owner_email
   }
 }
@@ -67,7 +67,7 @@ resource "aws_route_table_association" "private" {
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
   tags = {
-    Name    = "tgw-example-subnet-public-rt",
+    Name    = "${var.owner}-tgw-example-subnet-public-rt",
     "owner" = var.owner_email
   }
 }
@@ -108,20 +108,6 @@ resource "aws_route" "igw" {
 #   nat_gateway_id         = aws_nat_gateway.nat_gw[count.index].id
 # }
 
-# Find instance ami and type
-data "aws_ami" "amazon_linux" {
-  owners      = ["amazon"]
-  most_recent = true
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-kernel-5.10-hvm-*"]
-  }
-}
-
-data "aws_ec2_instance_type" "small" {
-  instance_type = "t2.small"
-}
-
 # Create private instances and related SGs
 resource "tls_private_key" "key" {
   algorithm = "RSA"
@@ -147,11 +133,11 @@ resource "local_file" "my_public_key" {
 }
 
 resource "aws_key_pair" "generate_key" {
-  key_name = "private-instance-key"
+  key_name = "${var.owner}-private-instance-key"
   #public_key = tls_private_key.key.public_key_openssh
   public_key = local_file.my_public_key.content
   tags = {
-    Name    = "tgw-example-private-instance-key",
+    Name    = "${var.owner}-tgw-example-private-instance-key",
     "owner" = var.owner_email
   }
 }
@@ -199,11 +185,20 @@ resource "aws_key_pair" "generate_key" {
 #   }
 # }
 
+# Find instance ami and type
+data "aws_ami" "ubuntu" {
+  owners      = ["amazon"]
+  most_recent = true
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+}
+
 # Create bastion instances and related sgs
 resource "aws_instance" "bastion" {
-  count = length(aws_subnet.public)
-  #ami = data.aws_ami.amazon_linux.id
-  ami                         = "ami-076bdd070268f9b8d"
+  count                       = length(aws_subnet.public)
+  ami                         = data.aws_ami.ubuntu.id
   associate_public_ip_address = true
   #instance_type               = data.aws_ec2_instance_type.small.instance_type
   instance_type          = "t3.micro"
@@ -211,7 +206,7 @@ resource "aws_instance" "bastion" {
   subnet_id              = aws_subnet.public[count.index].id
   vpc_security_group_ids = ["${aws_security_group.bastion.id}"]
   tags = {
-    Name    = "tgw-example-bastion-instance-${count.index}",
+    Name    = "${var.owner}-tgw-example-bastion-instance-${count.index}",
     "owner" = var.owner_email
   }
 }
@@ -233,7 +228,7 @@ locals {
 
 resource "aws_security_group" "bastion" {
   vpc_id = aws_vpc.main.id
-  name   = "tgw-example-bastion-instance-sg"
+  name   = "${var.owner}-tgw-example-bastion-instance-sg"
   egress {
     description = "Allow all outbound"
     from_port   = 0

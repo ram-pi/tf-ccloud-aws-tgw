@@ -9,10 +9,10 @@ data "confluent_service_account" "cc_sa" {
 
 # Create the network for the tgw
 resource "confluent_network" "tgw" {
-  display_name     = "tgw-network-${random_id.confluent.hex}"
+  display_name     = "${var.owner}-tgw-network-${random_id.confluent.hex}"
   cloud            = "AWS"
   region           = var.aws_region
-  cidr             = "10.0.0.0/16"
+  cidr             = "10.10.0.0/16"
   zones            = slice(data.aws_availability_zones.non_local.zone_ids, 0, 3)
   connection_types = ["TRANSITGATEWAY"]
   environment {
@@ -22,7 +22,7 @@ resource "confluent_network" "tgw" {
 
 # Create the tgw attachment
 resource "confluent_transit_gateway_attachment" "main" {
-  display_name = "tgw-attachment-${random_id.confluent.hex}"
+  display_name = "${var.owner}-tgw-attachment-${random_id.confluent.hex}"
   aws {
     ram_resource_share_arn = aws_ram_resource_share.confluent.arn
     transit_gateway_id     = aws_ec2_transit_gateway.main.id
@@ -38,7 +38,7 @@ resource "confluent_transit_gateway_attachment" "main" {
 
 # Provision the cluster in the network
 resource "confluent_kafka_cluster" "dedicated" {
-  display_name = "dedicated-tgw"
+  display_name = "${var.owner}-dedicated-tgw"
   availability = "SINGLE_ZONE"
   cloud        = "AWS"
   region       = var.aws_region

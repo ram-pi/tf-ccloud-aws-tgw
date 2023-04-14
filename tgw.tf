@@ -34,15 +34,14 @@ resource "aws_ec2_transit_gateway_vpc_attachment_accepter" "accepter" {
 
 # Create an attachment for the peer, AWS, VPC to the transit gateway
 resource "aws_ec2_transit_gateway_vpc_attachment" "attachment" {
-  subnet_ids         = aws_subnet.private.*.id
+  subnet_ids         = aws_subnet.public.*.id
   vpc_id             = aws_vpc.main.id
   transit_gateway_id = aws_ec2_transit_gateway.main.id
 }
 
 # Create routes from the subnets to the transit gateway CIDR
 resource "aws_route" "tgw" {
-  count                  = length(aws_subnet.private)
-  route_table_id         = aws_route_table.private[count.index].id
+  route_table_id         = aws_route_table.public.id
   destination_cidr_block = confluent_network.tgw.cidr
   transit_gateway_id     = aws_ec2_transit_gateway.main.id
 }
@@ -54,18 +53,22 @@ resource "aws_route" "tgw" {
 #   transit_gateway_id     = aws_ec2_transit_gateway.main.id
 # }
 
-data "aws_subnet_ids" "input" {
-  vpc_id = aws_vpc.main.id
-}
+# data "aws_subnet" "input" {
+#   filter {
+#     name   = "vpc-id"
+#     values = [aws_vpc.main.id]
+#   }
+# }
 
-# Find the routing table
-data "aws_route_tables" "rts" {
-  vpc_id = data.aws_subnet_ids.input.vpc_id
-}
+# # Find the routing table
+# data "aws_route_tables" "rts" {
+#   vpc_id = aws_vpc.main.id
+# }
 
-resource "aws_route" "r" {
-  for_each               = toset(data.aws_route_tables.rts.ids)
-  route_table_id         = each.key
-  destination_cidr_block = confluent_network.tgw.cidr
-  transit_gateway_id     = aws_ec2_transit_gateway.main.id
-}
+# resource "aws_route" "r" {
+#   # count                  = length(data.aws_route_tables.rts.ids)
+#   count                  = length(aws_subnet.public)
+#   route_table_id         = tolist(data.aws_route_tables.rts.ids)[count.index]
+#   destination_cidr_block = confluent_network.tgw.cidr
+#   transit_gateway_id     = aws_ec2_transit_gateway.main.id
+# }

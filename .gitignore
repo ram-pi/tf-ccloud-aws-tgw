@@ -3,3 +3,4 @@
 **/terraform.tfstate*
 **/*.pem
 **/terraform.tfvars
+**/.DS_Store
